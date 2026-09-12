@@ -98,6 +98,7 @@
 <audio id="player" preload="none"></audio>
 
 <script>
+
 const words = [
   {thai:'มา', roman:'maa'},
 {thai:'ใหม่', roman:'mài'},
@@ -106,15 +107,13 @@ const words = [
 {thai:'หมา', roman:'mǎa'}
 ];
 
-const endpoints = [
-  w => "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=th&q=" + encodeURIComponent(w),
-  w => "https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=th&q=" + encodeURIComponent(w)
-];
-
 let currentButton = null;
-let endpointIndex = 0;
 const player = document.getElementById("player");
 const msg = document.getElementById("msg");
+
+function audioSrc(index){
+  return "audio/tone-" + String(index + 1).padStart(3, "0") + ".mp3";
+}
 
 function resetButtons(){
   document.querySelectorAll(".card").forEach(b => b.classList.remove("playing"));
@@ -122,44 +121,29 @@ function resetButtons(){
 
 function playWord(index, button){
   const item = words[index];
-  endpointIndex = 0;
   currentButton = button;
   resetButtons();
   button.classList.add("playing");
   msg.textContent = "מנגן: " + item.thai + " (" + item.roman + ")";
   player.pause();
-  player.src = endpoints[endpointIndex](item.thai);
+  player.src = audioSrc(index);
   player.currentTime = 0;
   const p = player.play();
-  if (p && p.catch) p.catch(() => tryFallback(item));
-}
-
-function tryFallback(item){
-  endpointIndex++;
-  if (endpointIndex < endpoints.length){
-    player.src = endpoints[endpointIndex](item.thai);
-    const p = player.play();
-    if (p && p.catch) p.catch(() => failAudio());
-  } else {
-    failAudio();
-  }
+  if (p && p.catch) p.catch(failAudio);
 }
 
 function failAudio(){
   resetButtons();
-  msg.innerHTML = 'האודיו נחסם על ידי הדפדפן. <b>נסה לפתוח את הקובץ ב-Chrome או Edge</b> ולוודא שיש חיבור לאינטרנט.';
+  msg.textContent = "לא הצלחתי לנגן את קובץ השמע. רענן את העמוד ונסה שוב.";
 }
 
 player.addEventListener("ended", () => {
   resetButtons();
   msg.textContent = "";
 });
-player.addEventListener("error", () => {
-  if(currentButton) {
-    const index = [...document.querySelectorAll(".card")].indexOf(currentButton);
-    if(index >= 0) tryFallback(words[index]);
-  }
-});
+
+player.addEventListener("error", failAudio);
+
 </script>
 </body>
 </html>
