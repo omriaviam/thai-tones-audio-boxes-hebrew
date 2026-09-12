@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הגיית 5 הטונים בתאית</title>
+<style>
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:#17564d; color:white;
+    font-family:system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:28px;
+  }
+  .wrap{width:min(1500px,100%)}
+  h1{text-align:center;margin:0 0 10px;font-size:clamp(22px,2.3vw,36px)}
+  .sub{text-align:center;opacity:.9;margin-bottom:28px;font-size:17px}
+  .grid{direction:ltr;display:grid;grid-template-columns:repeat(5,1fr);gap:28px}
+  .card{
+    border:0;border-radius:28px;color:white;min-height:310px;cursor:pointer;
+    padding:25px 14px;box-shadow:0 8px 18px rgba(0,0,0,.14);
+    transition:.12s;position:relative;
+  }
+  .card:hover{transform:translateY(-3px);filter:brightness(1.05)}
+  .card:active{transform:scale(.98)}
+  .card.playing{outline:5px solid rgba(255,255,255,.9);outline-offset:4px}
+  .icon{position:absolute;right:18px;top:16px;width:42px;height:42px;border-radius:50%;
+    background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:19px}
+  .thai{font-size:clamp(54px,5vw,82px);font-weight:800;line-height:1.15}
+  .roman{font-size:clamp(27px,2.2vw,38px);font-weight:800;margin-top:18px}
+  .meaning{
+    direction:rtl; font-size:clamp(20px,1.6vw,27px); font-weight:800;
+    margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.35);
+  }
+  .tone{font-size:16px;margin-top:10px;font-weight:700;direction:rtl;opacity:.95}
+  .hint{font-size:14px;margin-top:16px;opacity:.9;direction:rtl}
+  #msg{min-height:28px;text-align:center;margin-top:24px;font-size:16px}
+  .backup{text-align:center;margin-top:8px;font-size:14px;opacity:.9}
+  @media(max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>5 הגיות שונות של “ma / mai” בתאית</h1>
+  <div class="sub">לחץ על כל תיבה כדי לשמוע את ההגייה ולראות את הפירוש בעברית.</div>
+  <div class="grid">
+    
+    <button class="card" style="background:#278879" onclick="playWord(0, this)">
+      <span class="icon">▶</span>
+      <div class="thai">มา</div>
+      <div class="roman">maa</div>
+      <div class="meaning">לבוא / מגיע</div>
+      <div class="tone">טון אמצעי</div>
+      <div class="hint">לחץ להשמעה</div>
+    </button>
+    
+    <button class="card" style="background:#3d78ba" onclick="playWord(1, this)">
+      <span class="icon">▶</span>
+      <div class="thai">ใหม่</div>
+      <div class="roman">mài</div>
+      <div class="meaning">חדש / חדשה</div>
+      <div class="tone">טון נמוך</div>
+      <div class="hint">לחץ להשמעה</div>
+    </button>
+    
+    <button class="card" style="background:#cd392f" onclick="playWord(2, this)">
+      <span class="icon">▶</span>
+      <div class="thai">ไม่</div>
+      <div class="roman">mâi</div>
+      <div class="meaning">לא</div>
+      <div class="tone">טון יורד</div>
+      <div class="hint">לחץ להשמעה</div>
+    </button>
+    
+    <button class="card" style="background:#e99200" onclick="playWord(3, this)">
+      <span class="icon">▶</span>
+      <div class="thai">ม้า</div>
+      <div class="roman">máa</div>
+      <div class="meaning">סוס</div>
+      <div class="tone">טון גבוה</div>
+      <div class="hint">לחץ להשמעה</div>
+    </button>
+    
+    <button class="card" style="background:#824caf" onclick="playWord(4, this)">
+      <span class="icon">▶</span>
+      <div class="thai">หมา</div>
+      <div class="roman">mǎa</div>
+      <div class="meaning">כלב</div>
+      <div class="tone">טון עולה</div>
+      <div class="hint">לחץ להשמעה</div>
+    </button>
+    
+  </div>
+  <div id="msg"></div>
+  <div class="backup">אם לחיצה ראשונה מתעכבת, המתן שנייה ולחץ שוב.</div>
+</div>
+
+<audio id="player" preload="none"></audio>
+
+<script>
+const words = [
+  {thai:'มา', roman:'maa'},
+{thai:'ใหม่', roman:'mài'},
+{thai:'ไม่', roman:'mâi'},
+{thai:'ม้า', roman:'máa'},
+{thai:'หมา', roman:'mǎa'}
+];
+
+const endpoints = [
+  w => "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=th&q=" + encodeURIComponent(w),
+  w => "https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=th&q=" + encodeURIComponent(w)
+];
+
+let currentButton = null;
+let endpointIndex = 0;
+const player = document.getElementById("player");
+const msg = document.getElementById("msg");
+
+function resetButtons(){
+  document.querySelectorAll(".card").forEach(b => b.classList.remove("playing"));
+}
+
+function playWord(index, button){
+  const item = words[index];
+  endpointIndex = 0;
+  currentButton = button;
+  resetButtons();
+  button.classList.add("playing");
+  msg.textContent = "מנגן: " + item.thai + " (" + item.roman + ")";
+  player.pause();
+  player.src = endpoints[endpointIndex](item.thai);
+  player.currentTime = 0;
+  const p = player.play();
+  if (p && p.catch) p.catch(() => tryFallback(item));
+}
+
+function tryFallback(item){
+  endpointIndex++;
+  if (endpointIndex < endpoints.length){
+    player.src = endpoints[endpointIndex](item.thai);
+    const p = player.play();
+    if (p && p.catch) p.catch(() => failAudio());
+  } else {
+    failAudio();
+  }
+}
+
+function failAudio(){
+  resetButtons();
+  msg.innerHTML = 'האודיו נחסם על ידי הדפדפן. <b>נסה לפתוח את הקובץ ב-Chrome או Edge</b> ולוודא שיש חיבור לאינטרנט.';
+}
+
+player.addEventListener("ended", () => {
+  resetButtons();
+  msg.textContent = "";
+});
+player.addEventListener("error", () => {
+  if(currentButton) {
+    const index = [...document.querySelectorAll(".card")].indexOf(currentButton);
+    if(index >= 0) tryFallback(words[index]);
+  }
+});
+</script>
+</body>
+</html>
